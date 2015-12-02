@@ -80,14 +80,22 @@ def main():
     connections_filenames = [os.path.join('DATA', path)
                              for path in connection_paths]
     paths = (
-        's50-alcohol.dat', 's50-drugs.dat',
-        's50-familyevent.dat', 's50-smoke.dat', 's50-sport.dat'
+        's50-alcohol.dat', 's50-drugs.dat', 's50-smoke.dat', 's50-sport.dat'
     )
     paths_to_parameters = [os.path.join('DATA', path) for path in paths]
+
+    data_array = []
     for i in xrange(len(connection_paths)):
-        data = prepare_data(connections_filenames[i], paths_to_parameters,
-                            year_index=i + 1)
-        prepare_reply(paths, data, test_data=data, degree=1, index_year=i + 1)
+        data_array.append(prepare_data(connections_filenames[i],
+                                       paths_to_parameters, year_index=i + 1))
+
+    length_of_data = len(data_array)
+    for i in xrange(length_of_data):
+        for j in xrange(length_of_data):
+            if i != j:
+                print 'test data of year: {}'.format(j + 1)
+                prepare_reply(paths, data_array[i], test_data=data_array[j],
+                              degree=1, index_year=i + 1)
 
 
 if __name__ == '__main__':
