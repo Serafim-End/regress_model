@@ -1,14 +1,12 @@
 import os
 
-from pprint import pprint
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
-from sklearn.pipeline import Pipeline
+import numpy as np
+import statsmodels.api as sm
 
 from preparation import prepare_data
 
 
-def solution(prepared_data, degree=1, test_data=None):
+def solution(prepared_data):
     """
     solution of task
     if test data is None put train_data into test_data
@@ -18,47 +16,20 @@ def solution(prepared_data, degree=1, test_data=None):
     :param test_data: test data with structure like prepared_data
     :return: regress coefficients and r_square
     """
-    sparse_matrix = prepared_data['parameters']
+    matrix = prepared_data['parameters']
     y = prepared_data['connections']
-    model = Pipeline([('poly', PolynomialFeatures(degree=degree)),
-                      ('linear', LinearRegression(fit_intercept=False))])
-    model = model.fit(sparse_matrix, y)
-    regress_coef = model.named_steps['linear'].coef_
 
-    regression = LinearRegression()
-    if test_data is None:
-        regression.fit(sparse_matrix, y)
-        r_square = regression.score(sparse_matrix, y)
-    else:
-        if not isinstance(test_data, dict) or 'connections' not in test_data \
-                or 'parameters' not in test_data:
-            raise BaseException('put correct data into test_data')
-        regression.fit(sparse_matrix, y)
-        r_square = regression.score(test_data['parameters'],
-                                    test_data['connections'])
-    return regress_coef, r_square
+    sparse_matrix = [[0] * len(matrix)] * len(matrix[0])
+    for i in xrange(len(matrix)):
+        for j in xrange(len(matrix[0])):
+            sparse_matrix[j][i] = matrix[i][j]
+    ones = np.ones(len(sparse_matrix[0]))
+    X = sm.add_constant(np.column_stack((sparse_matrix[0], ones)))
+    for ele in sparse_matrix[1:]:
+        X = sm.add_constant(np.column_stack((ele, X)))
 
-
-def prepare_reply(parameters_paths, prepared_data, test_data,
-                  degree=1, index_year=1):
-    """
-    print
-    :param parameters_paths:
-    :param prepared_data:
-    :param test_data:
-    :param degree:
-    :param index_year:
-    :return:
-    """
-    regress_coef, r_square = solution(prepared_data, degree, test_data)
-    reply = {path.split('.')[0][4:]: regress_coef[i]
-             for i, path in enumerate(parameters_paths)}
-    print 'Index of year: {}'.format(index_year)
-    print 'R^2: {}'.format(r_square)
-    print 'Coefficients: '
-    pprint(reply)
-    print
-
+    regression = sm.OLS(y, X).fit()
+    print regression.summary()
 
 def main():
     """
@@ -88,15 +59,9 @@ def main():
     for i in xrange(len(connection_paths)):
         data_array.append(prepare_data(connections_filenames[i],
                                        paths_to_parameters, year_index=i + 1))
-
-    length_of_data = len(data_array)
-    for i in xrange(length_of_data):
-        for j in xrange(length_of_data):
-            if i != j:
-                print 'test data of year: {}'.format(j + 1)
-                prepare_reply(paths, data_array[i], test_data=data_array[j],
-                              degree=1, index_year=i + 1)
-
+        print 'index of year: {}'.format(i + 1)
+        solution(data_array[i])
+        print '\n' * 5
 
 if __name__ == '__main__':
     main()
